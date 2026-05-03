@@ -1,0 +1,23 @@
+function [scara, qRobot0] = create_robot()
+
+    linkLengths = [2.4, 1, 1, 0.25];
+    gripperLength = 0.1;
+    fingerLength = 0.2;
+
+    link1 = Revolute('d', 0, 'a', linkLengths(2), 'alpha', 0);
+    link2 = Revolute('d', 0, 'a', linkLengths(3), 'alpha', pi);
+    link3 = Prismatic('theta', 0, 'a', 0, 'alpha', 0);
+    link4 = Revolute('d', linkLengths(4), 'a', 0, 'alpha', 0);
+     
+    scara = SerialLink([link1, link2, link3, link4]);
+    scara.name = 'SCARA';
+    scara.tool = transl(0, 0, gripperLength + 0.5 * fingerLength);
+
+    baseTranslation = transl([0, 0, linkLengths(1)]);
+    basePose = baseTranslation;
+    scara.base = basePose;
+    
+    qRobot0 = [-pi/2; 3*pi/4; 0.1; 0];
+    
+end
+
