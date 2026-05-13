@@ -55,7 +55,7 @@ end
 % Use the visual clone for rendering
 scara_vis.plot(q_full(:,1).', 'workspace', ws, 'noshadow', ...
            'nobase', 'notiles', 'delay', 0, 'nowrist');
-n_skip = 25;   % Draw every 25th frame for smooth, real-time playback
+n_skip = 25;   % draw every 25th frame for smooth, real-time playback
 
 for k = 1:n_skip:size(q_full, 2)
     % Safety check: for closed figure, stop the animation
@@ -123,12 +123,10 @@ for k = 1:n_skip:size(q_full, 2)
     title(ax, sprintf('Cycle %d   t = %.2f s', cycle_idx+1, t_global));
     drawnow;
 end
-
 end
 
 
-%% Helper Drawing Functions
-
+% Helper Drawing Functions
 function draw_gripper(ax, T_tcp, is_closed)
 % Draws the dynamic gripper (body + two fingers)
 pTCP = T_tcp(1:3, 4);
@@ -136,10 +134,10 @@ phi  = atan2(T_tcp(2,1), T_tcp(1,1));
 
 gColor = [0.6 0.6 0.6];
 
-body_w = 0.25;      % width along perp (opening direction)
-body_d = 0.10;      % depth along phi (arm direction)
-body_h = 0.10;      % height (vertical)
-finger_len   = 0.20;
+body_w = 0.25;   % width along perp
+body_d = 0.10;   % depth along phi
+body_h = 0.10;   % height
+finger_len = 0.20;
 finger_thick = 0.025;
 
 % Body: wx = body_d (along phi), wy = body_w (along perp)
@@ -148,11 +146,11 @@ draw_box(ax, p_body, body_d, body_w, body_h, phi, gColor);
 
 % Perpendicular direction to phi (finger opening axis)
 perp_x = -sin(phi);
-perp_y =  cos(phi);
+perp_y = cos(phi);
 
 if is_closed
-    % Fingers pointing DOWN from body edges, thin along perp
-    offset = body_w/2 + finger_thick/2;   % inner edge flush with body edge
+    % Fingers pointing DOWN from body edges
+    offset = body_w/2 + finger_thick/2;
     f_z_bot = pTCP(3) - 0.10;
 
     for side = [-1, 1]
@@ -163,8 +161,8 @@ if is_closed
 
 else
     % Fingers HORIZONTAL, extending outward from body along perp
-    offset = body_w/2 + finger_len/2;     % inner edge flush with body edge
-    f_z_bot = pTCP(3) + 0.10;             % at body bottom level
+    offset = body_w/2 + finger_len/2;
+    f_z_bot = pTCP(3) + 0.10;
 
     for side = [-1, 1]
         fx = pTCP(1) + side * offset * perp_x;
@@ -177,8 +175,8 @@ end
 
 function draw_axes(ax, T, len)
 % Manually draws RGB coordinate axes for a given pose T
-p = T(1:3, 4);      % Origin of the frame
-R = T(1:3, 1:3);    % Rotation matrix (directions of axes)
+p = T(1:3, 4);      % origin of the frame
+R = T(1:3, 1:3);    % rotation matrix
 
 % Define axis colors (Standard: X=Red, Y=Green, Z=Blue)
 colors = {'r', 'g', 'b'};
