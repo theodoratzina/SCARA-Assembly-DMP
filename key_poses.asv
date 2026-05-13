@@ -1,0 +1,40 @@
+function poses = key_poses(geo, timing, T_home)
+% KEY_POSES  Compute the key end-effector poses for the assembly task.
+%
+%   poses = key_poses(geo, timing, T_home)
+%
+%   Returns a struct with four target waypoints in task space:
+%     .p_home,    .phi_home
+%     .p_grasp,   .phi_grasp        (where Part A is at t = t_appr)
+%     .p_above_B, .phi_above_B      (clearance height above Part B)
+%     .p_assembly,.phi_assembly     (Part A inserted into Part B socket)
+%
+% Convention
+%   The full pose is built in plan_trajectory as
+%       T = transl(p) * trotz(phi) * trotx(pi)
+%   so the tool z-axis points in -world_z (matching the SCARA's link 2
+%   alpha = pi flip), and phi is the tool x-axis angle around +world_z.
+
+% Home
+poses.p_home = T_home(1:3, 4);
+poses.phi_home = atan2(T_home(2,1), T_home(1,1));
+
+% Grasp pose: meet Part A on belt A at t = t_appr
+xA_grasp = geo.beltA_x0 + geo.beltA_vx * timing.t_appr;
+poses.p_grasp = [xA_grasp; geo.beltA_y; geo.beltA_z + geo.partA_offset];
+poses.phi_grasp = poses.phi_home;
+
+% ----- Above Part B: Part B's final position, clearance height -----
+xB              = geo.beltB_x0 + geo.beltB_vx * geo.beltB_dur;
+clearance       = 0.30;
+z_above_B       = geo.beltB_z + geo.partB_h + clearance;
+poses.p_above_B   = [xB; geo.beltB_y; z_above_B];
+poses.phi_above_B = poses.phi_home + pi/2;     % rotation done during transit
+
+% ----- Assembly: Part A's screw bottom at top_B - socket_d -----
+z_assembly       = geo.beltB_z + geo.partB_h - geo.partB_socket_d ...
+                   + geo.partA_offset;
+poses.p_assembly   = [xB; geo.beltB_y; z_assembly];
+poses.phi_assembly = poses.phi_above_B;
+
+end

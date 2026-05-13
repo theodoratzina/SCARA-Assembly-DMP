@@ -1,0 +1,59 @@
+function [y, dy, ddy] = simulate_dmp(dmp, y0, g, t)
+% Integrate a trained DMP forward with new start and goal
+%
+% Args:
+%   dmp: (struct) trained DMP model containing weights, centers, parameters
+%   y0: new starting position
+%   g: new goal position
+%   t: time vector for the simulation
+%
+% Returns:
+%   y: generated position trajectory
+%   dy: generated velocity trajectory
+%   ddy: generated acceleration trajectory
+
+dt = t(2) - t(1);
+N_t = length(t);
+y0 = y0(:);
+g = g(:);
+D = numel(y0);
+scale = g - y0;   % the new spatial scale
+
+% State variables
+x = 1;   % canonical phase clock (starts at 1, decays to 0)
+y_curr = y0;   % initial position
+z_curr = zeros(D, 1);   % initial scaled velocity (starts from rest)
+
+y = zeros(D, N_t);
+dy = zeros(D, N_t);
+ddy = zeros(D, N_t);
+
+% Forward Simulation Loop (Euler Integration)
+for k = 1:N_t
+    % Forcing term f(x)
+    psi     = exp(-dmp.h .* (x - dmp.c).^2);
+    psi_sum = sum(psi);
+    if psi_sum > 1e-10
+        f = (dmp.w * psi.') * x / psi_sum;       % D x 1
+    else
+        f = zeros(D, 1);
+    end
+    f_scaled = f .* scale;
+
+    % Acceleration of the z dynamics (un-divided by tau)
+    z_acc = dmp.alpha_z * (dmp.beta_z * (g - y_curr) - z_curr) + f_scaled;
+
+    % Outputs at step k
+    y(:, k)   = y_curr;
+    dy(:, k)  = z_curr / dmp.tau;
+    ddy(:, k) = z_acc / dmp.tau^2;
+
+    % Euler step (use OLD values for all derivatives)
+    if k < N_t
+        z_curr = z_curr + dt * z_acc / dmp.tau;
+        y_curr = y_curr + dt * dy(:, k);
+        x      = x      + dt * (-dmp.alpha_x * x / dmp.tau);
+    end
+end
+
+end

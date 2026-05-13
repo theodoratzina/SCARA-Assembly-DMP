@@ -1,7 +1,7 @@
 function dmp = train_dmp(t, y, dy, ddy, params)
 % Train a Dynamic Movement Primitive on a vector demonstration
 %
-% Args:
+% Inputs:
 %   t: 1 x N time vector
 %   y: D x N demonstration trajectory (D = 3 for position, 1 for orientation)
 %   dy: D x N demonstration velocity
