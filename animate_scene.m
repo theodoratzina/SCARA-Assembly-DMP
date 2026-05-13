@@ -236,13 +236,6 @@ sy = p(2) + 0.00 * sin(partB_rot);
 z_hole = p(3) + geo.partB_h + 0.002;
 draw_disc(ax, sx, sy, z_hole, geo.partB_socket_w / 2, ...
           0, [0.10 0.10 0.20]);
-
-% % Orientation indicator
-% r = geo.partB_w/2;
-% lx = [p(1), p(1) + r * cos(partB_rot)];
-% ly = [p(2), p(2) + r * sin(partB_rot)];
-% lz = [1 1] * (p(3) + geo.partB_h + 0.005);
-% plot3(ax, lx, ly, lz, 'r-', 'LineWidth', 3, 'Tag', 'sceneObj');
 end
 
 

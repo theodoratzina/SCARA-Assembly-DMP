@@ -52,33 +52,40 @@ if isa(T_home, 'SE3'), T_home = T_home.T; end
 poses = key_poses(geo, timing, T_home);
 demo = plan_trajectory(poses, geo, timing);
 
-%% 3. Slice the demo into "forward" (home -> assembly) and "return"
-T_fwd_end = timing.t_appr + timing.t_track + timing.t_trans + timing.t_desc;
-T_ret_start = T_fwd_end + timing.t_hold;
+%% 3. Slice the demo into three segments
+T2 = timing.t_appr + timing.t_track;               % grasp: 0 -> T2
+T_fwd_end = T2 + timing.t_trans + timing.t_desc;   % deliver: T2 -> T_fwd
+T_ret_start = T_fwd_end + timing.t_hold;           % return:  T_ret -> end
 
-idx_fwd = demo.t <= T_fwd_end + 1e-9;
+idx_grasp = demo.t <= T2 + 1e-9;
+idx_deliver = demo.t >= T2 - 1e-9 & demo.t <= T_fwd_end + 1e-9;
 idx_ret = demo.t >= T_ret_start - 1e-9;
 
-% Extract time vectors for each phase
-t_fwd = demo.t(idx_fwd) - demo.t(find(idx_fwd, 1));
+% Grasp segment (replayed unchanged every cycle)
+t_grasp = demo.t(idx_grasp);
+p_grasp = demo.p(:, idx_grasp);
+phi_grasp = demo.phi(idx_grasp);
+ 
+% Deliver segment (DMP-adapted)
+t_deliver = demo.t(idx_deliver) - demo.t(find(idx_deliver, 1));
+p_deliver = demo.p(:, idx_deliver);
+phi_deliver = demo.phi(idx_deliver);
+ 
+% Return segment (DMP-adapted)
 t_ret = demo.t(idx_ret) - demo.t(find(idx_ret, 1));
-
-% Extract position (p) and orientation (phi) data
-p_fwd = demo.p(:, idx_fwd);     
-phi_fwd = demo.phi(idx_fwd);
-p_ret = demo.p(:, idx_ret);    
+p_ret = demo.p(:, idx_ret);
 phi_ret = demo.phi(idx_ret);
 
 %% 4. Numerical derivatives for DMP training
-[dp_fwd, ddp_fwd ] = num_deriv(p_fwd, timing.dt);
+[dp_del, ddp_del ] = num_deriv(p_deliver, timing.dt);
 [dp_ret, ddp_ret ] = num_deriv(p_ret, timing.dt);
-[dphi_fwd, ddphi_fwd] = num_deriv(phi_fwd, timing.dt);
+[dphi_del, ddphi_del] = num_deriv(phi_deliver, timing.dt);
 [dphi_ret, ddphi_ret] = num_deriv(phi_ret, timing.dt);
 
-%% 5. Train four DMPs (position + orientation, forward + return)
-dmp_pos_fwd = train_dmp(t_fwd, p_fwd, dp_fwd, ddp_fwd);
+%% 5. Train DMPs (deliver + return only; grasp is replayed)
+dmp_pos_del = train_dmp(t_deliver, p_deliver, dp_del, ddp_del);
 dmp_pos_ret = train_dmp(t_ret, p_ret, dp_ret, ddp_ret);
-dmp_phi_fwd = train_dmp(t_fwd, phi_fwd, dphi_fwd, ddphi_fwd);
+dmp_phi_del = train_dmp(t_deliver, phi_deliver, dphi_del, ddphi_del);
 dmp_phi_ret = train_dmp(t_ret, phi_ret, dphi_ret, ddphi_ret);
 
 %% 6. Three scenarios (delta, theta_delta)
@@ -90,65 +97,132 @@ scen(3).delta = [0.4; -0.15; 0];
 scen(3).theta = deg2rad(-25);
 n_s = numel(scen);   % number of scenarios
 
-all_q = cell(n_s, 1);     % joint angles 
-all_p = cell(n_s, 1);     % end-effector positions
-all_phi = cell(n_s, 1);   % end-effector orientations
-all_t = cell(n_s, 1);     % time vectors
-geo_per_cycle = cell(n_s, 1);    % specific geometry (Part B's pose)
+%% 7. Generate Full Cycles
+% Start points for the deliver DMP (= end of grasp, same every cycle)
+p_grasp_end = p_grasp(:, end);
+phi_grasp_end = phi_grasp(end);
 
-%% 7. Generate one full cycle per scenario
+% Question 2: Position DMP only (orientation remains constant)
+all_q_q2 = cell(n_s, 1);   
+all_p_q2 = cell(n_s, 1);
+all_phi_q2 = cell(n_s, 1); 
+all_t_q2 = cell(n_s, 1);
+geo_per_cycle_q2 = cell(n_s, 1);
+
 for s = 1:n_s
     g_pos = poses.p_assembly + scen(s).delta;
-    g_phi = poses.phi_assembly + scen(s).theta;
-
-    % Forward stroke
-    [p_f, ~, ~] = simulate_dmp(dmp_pos_fwd, poses.p_home, g_pos, t_fwd);
-    [phi_f, ~, ~] = simulate_dmp(dmp_phi_fwd, poses.phi_home, g_phi, t_fwd);
-
-    % Hold (gripper opens/closes)
+    
+    % 1. Grasp: replay Part 1 (unchanged)
+    p_1 = p_grasp;
+    phi_1 = phi_grasp;
+ 
+    % 2. Deliver: position DMP, orientation from Part 1
+    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver);
+    phi_2 = phi_deliver;
+ 
+    % 3. Hold
     n_h = round(timing.t_hold / timing.dt);
-    p_h = repmat(p_f(:, end), 1, n_h);
-    phi_h = repmat(phi_f(:, end), 1, n_h);
-
-    % Return stroke (start from current end pose)
-    [p_r, ~, ~] = simulate_dmp(dmp_pos_ret, g_pos, poses.p_home, t_ret);
-    [phi_r, ~, ~] = simulate_dmp(dmp_phi_ret, g_phi, poses.phi_home, t_ret);
-
+    p_3 = repmat(p_2(:, end), 1, n_h);
+    phi_3 = repmat(phi_2(end), 1, n_h);
+ 
+    % 4. Return: position DMP, orientation from Part 1
+    [p_4, ~, ~] = simulate_dmp(dmp_pos_ret, g_pos, poses.p_home, t_ret);
+    phi_4 = phi_ret;
+ 
     % Concatenate
-    p_full = [p_f, p_h, p_r];
-    phi_full = [phi_f, phi_h, phi_r];
-    N_full = size(p_full, 2);
-    t_full = (0:N_full - 1) * timing.dt;
-
+    p_full   = [p_1, p_2, p_3, p_4];
+    phi_full = [phi_1, phi_2, phi_3, phi_4];
+    N_full   = size(p_full, 2);
+    t_full   = (0:N_full - 1) * timing.dt;
+ 
     % Inverse Kinematics
-    q_full = zeros(4, N_full);   
-    q_full(:, 1) = q0;
+    q_full = zeros(4, N_full);   q_full(:, 1) = q0;
     for k = 2:N_full
         Tk = transl(p_full(:, k).') * trotz(phi_full(k)) * trotx(pi);
         q_full(:, k) = scara_ikine(Tk, q_full(:, k - 1));
     end
-
-    % Per-cycle scene geometry (Part B is shifted and rotated)
+ 
+    % Per-cycle geometry
     geo_s = geo;
-    geo_s.beltB_x0 = geo.beltB_x0 + scen(s).delta(1);
-    geo_s.beltB_y = geo.beltB_y + scen(s).delta(2);
-    geo_s.partB_rot = scen(s).theta;
+    geo_s.beltB_x0  = geo.beltB_x0 + scen(s).delta(1);
+    geo_s.beltB_y   = geo.beltB_y  + scen(s).delta(2);
+    geo_s.partB_rot = 0;
+ 
+    all_q_q2{s} = q_full;   all_p_q2{s} = p_full;
+    all_phi_q2{s} = phi_full; all_t_q2{s} = t_full;
+    geo_per_cycle_q2{s} = geo_s;
+end
 
-    % Store data
-    all_q{s} = q_full;
-    all_p{s} = p_full;
-    all_phi{s} = phi_full;
-    all_t{s} = t_full;
-    geo_per_cycle{s} = geo_s;
+% Question 3: Position and Orientation DMPs (full adaptation)
+all_q_q3 = cell(n_s, 1);   
+all_p_q3 = cell(n_s, 1);
+all_phi_q3 = cell(n_s, 1); 
+all_t_q3 = cell(n_s, 1);
+geo_per_cycle_q3 = cell(n_s, 1);
+
+for s = 1:n_s
+    g_pos = poses.p_assembly + scen(s).delta;
+    g_phi = poses.phi_assembly + scen(s).theta;
+
+     % 1. Grasp: replay Part 1 (unchanged)
+    p_1 = p_grasp;
+    phi_1 = phi_grasp;
+ 
+    % 2. Deliver: position + orientation DMPs
+    [p_2, ~, ~]   = simulate_dmp(dmp_pos_del, p_grasp_end,   g_pos, t_deliver);
+    [phi_2, ~, ~] = simulate_dmp(dmp_phi_del, phi_grasp_end, g_phi, t_deliver);
+ 
+    % 3. Hold
+    n_h = round(timing.t_hold / timing.dt);
+    p_3 = repmat(p_2(:, end), 1, n_h);
+    phi_3 = repmat(phi_2(end), 1, n_h);
+ 
+    % 4. Return: position + orientation DMPs
+    [p_4, ~, ~]   = simulate_dmp(dmp_pos_ret, g_pos, poses.p_home,   t_ret);
+    [phi_4, ~, ~] = simulate_dmp(dmp_phi_ret, g_phi, poses.phi_home, t_ret);
+ 
+    % Concatenate
+    p_full   = [p_1, p_2, p_3, p_4];
+    phi_full = [phi_1, phi_2, phi_3, phi_4];
+    N_full   = size(p_full, 2);
+    t_full   = (0:N_full - 1) * timing.dt;
+ 
+    % Inverse Kinematics
+    q_full = zeros(4, N_full);   q_full(:, 1) = q0;
+    for k = 2:N_full
+        Tk = transl(p_full(:, k).') * trotz(phi_full(k)) * trotx(pi);
+        q_full(:, k) = scara_ikine(Tk, q_full(:, k - 1));
+    end
+ 
+    % Per-cycle geometry
+    geo_s = geo;
+    geo_s.beltB_x0  = geo.beltB_x0 + scen(s).delta(1);
+    geo_s.beltB_y   = geo.beltB_y  + scen(s).delta(2);
+    geo_s.partB_rot = scen(s).theta;
+ 
+    all_q_q3{s} = q_full;   all_p_q3{s} = p_full;
+    all_phi_q3{s} = phi_full; all_t_q3{s} = t_full;
+    geo_per_cycle_q3{s} = geo_s;
 end
 
 %% 8. Plots
-plot_dmp_results(all_t, all_p, all_phi, all_q, demo, scen);
+plot_dmp_results(all_t_q2, all_p_q2, all_phi_q2, all_q_q2, demo, scen);
+plot_dmp_results(all_t_q3, all_p_q3, all_phi_q3, all_q_q3, demo, scen);
 
-%% 9. Animation: 3 cycles, one per scenario
-q_concat = cat(2, all_q{:});
-t_concat = (0:size(q_concat, 2) - 1) * timing.dt;
-animate_scene(scara, q_concat, t_concat, geo_per_cycle, timing, n_s);
+%% 9. Animations: 3 cycles, one per scenario
+disp('Q2: Gripper with constant angle');
+q_concat_q2 = cat(2, all_q_q2{:});
+t_concat_q2 = (0:size(q_concat_q2, 2) - 1) * timing.dt;
+animate_scene(scara, q_concat_q2, t_concat_q2, geo_per_cycle_q2, timing, n_s);
+
+disp('Q2 completed');
+disp('Press ENTER in the Command Window to start Q3...');
+pause;
+
+disp('Q3: Full angle adaptation');
+q_concat_q3 = cat(2, all_q_q3{:});
+t_concat_q3 = (0:size(q_concat_q3, 2) - 1) * timing.dt;
+animate_scene(scara, q_concat_q3, t_concat_q3, geo_per_cycle_q3, timing, n_s);
 
 %% Helper functions
 function [dy, ddy] = num_deriv(y, dt)
