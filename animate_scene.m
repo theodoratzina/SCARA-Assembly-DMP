@@ -62,7 +62,7 @@ for k = 1:n_skip:size(q_full, 2)
     if ~ishandle(ax)
         break;
     end
-    
+
     % Clear previous frame's dynamic objects
     delete(findobj(ax, 'Tag', 'sceneObj'));
 
@@ -114,6 +114,9 @@ for k = 1:n_skip:size(q_full, 2)
     % Draw Dynamic Gripper
     gripper_closed = (t_in_cycle >= T2) && (t_in_cycle < T5);
     draw_gripper(ax, T_tcp, gripper_closed);
+
+    % Draw custom coordinate axes at the real TCP (Frame E)
+    draw_axes(ax, T_tcp, 0.4);
 
     % Update Robot pose
     scara_vis.animate(q_full(:,k).');
@@ -168,6 +171,32 @@ else
         fy = pTCP(2) + side * offset * perp_y;
         draw_box(ax, [fx; fy; f_z_bot], body_d, finger_len, finger_thick, phi, gColor);
     end
+end
+end
+
+
+function draw_axes(ax, T, len)
+% Manually draws RGB coordinate axes for a given pose T
+p = T(1:3, 4);      % Origin of the frame
+R = T(1:3, 1:3);    % Rotation matrix (directions of axes)
+
+% Define axis colors (Standard: X=Red, Y=Green, Z=Blue)
+colors = {'r', 'g', 'b'};
+labels = {'X_E', 'Y_E', 'Z_E'};
+
+for i = 1:3
+    % Direction vector for the current axis
+    dir = R(1:3, i) * len;
+    
+    % Draw the arrow
+    quiver3(ax, p(1), p(2), p(3), dir(1), dir(2), dir(3), ...
+            'Color', colors{i}, 'LineWidth', 1.0, 'MaxHeadSize', 1.0, ...
+            'AutoScale', 'off', 'Tag', 'sceneObj');
+    p_label = p + R(1:3, i) * (len * 1.1);   % label position
+    
+    % Add text label
+    text(p_label(1), p_label(2), p_label(3), labels{i}, ...
+         'Color', colors{i}, 'FontWeight', 'bold', 'FontSize', 10, 'Tag', 'sceneObj');
 end
 end
 
