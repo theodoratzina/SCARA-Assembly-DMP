@@ -67,6 +67,12 @@ for k = 1:n_skip:size(q_full, 2)
     draw_belt(ax, g.beltA_y, g.beltA_z, [-1, 3], [0.85 0.65 0.65]);
     draw_belt(ax, g.beltB_y, g.beltB_z, [-1, 3], [0.65 0.65 0.85]);
 
+    % Forward kinematics (computed once, used for Part A + Gripper)
+    T_tcp = scara.fkine(q_full(:,k).');
+    if isa(T_tcp, 'SE3'), T_tcp = T_tcp.T; end
+    pTCP = T_tcp(1:3, 4);
+    phi_tcp = atan2(T_tcp(2,1), T_tcp(1,1));
+
     % Draw Part A
     if t_in_cycle < T2
         % State 1: Moving on Belt A
@@ -75,12 +81,8 @@ for k = 1:n_skip:size(q_full, 2)
 
     elseif t_in_cycle < T5
         % State 2: Attached to the robot gripper
-        Tt = scara.fkine(q_full(:,k).');
-        if isa(Tt,'SE3'), Tt = Tt.T; end
-        pTCP = Tt(1:3, 4);
-        rotA = atan2(Tt(2,1), Tt(1,1));
         pA = pTCP - [0; 0; g.partA_offset];
-        draw_partA(ax, pA, rotA, g);
+        draw_partA(ax, pA, phi_tcp, g);
 
     else
         % State 3: Assembled into Part B
@@ -96,6 +98,10 @@ for k = 1:n_skip:size(q_full, 2)
     end
     draw_partB(ax, [xB; g.beltB_y; g.beltB_z], g, partB_rot);
 
+    % Draw Dynamic Gripper
+    gripper_closed = (t_in_cycle >= T2) && (t_in_cycle < T5);
+    draw_gripper(ax, T_tcp, gripper_closed);
+
     % Update Robot
     scara.animate(q_full(:,k).');
     title(ax, sprintf('Cycle %d   t = %.2f s', cycle_idx+1, t_global));
@@ -107,11 +113,57 @@ end
 
 %% Helper Drawing Functions
 
+function draw_gripper(ax, T_tcp, is_closed)
+% Draws the dynamic gripper (body + two fingers)
+pTCP = T_tcp(1:3, 4);
+phi  = atan2(T_tcp(2,1), T_tcp(1,1));
+
+gColor = [0.6 0.6 0.6];
+
+body_w = 0.25;      % width along perp (opening direction)
+body_d = 0.10;      % depth along phi (arm direction)
+body_h = 0.10;      % height (vertical)
+finger_len   = 0.20;
+finger_thick = 0.025;
+
+% Body: wx = body_d (along phi), wy = body_w (along perp)
+p_body = [pTCP(1); pTCP(2); pTCP(3) + 0.10];
+draw_box(ax, p_body, body_d, body_w, body_h, phi, gColor);
+
+% Perpendicular direction to phi (finger opening axis)
+perp_x = -sin(phi);
+perp_y =  cos(phi);
+
+if is_closed
+    % Fingers pointing DOWN from body edges, thin along perp
+    offset = body_w/2 + finger_thick/2;   % inner edge flush with body edge
+    f_z_bot = pTCP(3) - 0.10;
+
+    for side = [-1, 1]
+        fx = pTCP(1) + side * offset * perp_x;
+        fy = pTCP(2) + side * offset * perp_y;
+        draw_box(ax, [fx; fy; f_z_bot], body_d, finger_thick, finger_len, phi, gColor);
+    end
+
+else
+    % Fingers HORIZONTAL, extending outward from body along perp
+    offset = body_w/2 + finger_len/2;     % inner edge flush with body edge
+    f_z_bot = pTCP(3) + 0.10;             % at body bottom level
+
+    for side = [-1, 1]
+        fx = pTCP(1) + side * offset * perp_x;
+        fy = pTCP(2) + side * offset * perp_y;
+        draw_box(ax, [fx; fy; f_z_bot], body_d, finger_len, finger_thick, phi, gColor);
+    end
+end
+end
+
+
 function draw_belt(ax, yc, zc, x_range, color)
 % Draws a flat rectangular patch to represent a conveyor belt
-w  = 0.30;
+w = 0.30;
 xs = [x_range(1), x_range(2), x_range(2), x_range(1)];
-ys = [yc-w/2,    yc-w/2,    yc+w/2,    yc+w/2];
+ys = [yc-w/2, yc-w/2, yc+w/2, yc+w/2];
 zs = [zc, zc, zc, zc];
 patch(ax, xs, ys, zs, color, 'FaceAlpha', 0.6, ...
       'EdgeColor','k', 'Tag', 'sceneObj');
@@ -136,7 +188,7 @@ function draw_partB(ax, p, geo, partB_rot)
 if nargin < 4, partB_rot = 0; end
 
 % Rectangular body
-draw_box(ax, p, geo.partB_w, geo.partB_w, geo.partB_h, 0, [0.25 0.35 0.75]);
+draw_box(ax, p, geo.partB_w, geo.partB_w, geo.partB_h, partB_rot, [0.25 0.35 0.75]);
 
 % Cylindrical socket (dark disc inside the top)
 sx = p(1) + 0.00 * cos(partB_rot);

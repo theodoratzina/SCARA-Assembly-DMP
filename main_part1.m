@@ -63,7 +63,7 @@ end
 %% 6. Joint velocities (numerical differentiation)
 dq = zeros(4, N);
 dq(:, 2:end) = diff(q, 1, 2) / timing.dt;
-dq(:, 1) = dq(:, 2);
+dq(:, 1) = dq(:, 2);   % Assume constant velocity for the first time step
 
 %% 7. Plots
 plot_results(traj, q, dq);

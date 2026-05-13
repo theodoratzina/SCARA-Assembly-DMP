@@ -20,7 +20,7 @@ poses.phi_grasp = poses.phi_home;
 
 % Above Part B: final position, clearance height
 xB = geo.beltB_x0 + geo.beltB_vx * geo.beltB_dur;
-clearance = 0.30;
+clearance = 0.30;   % Safe hover distance above Part B before insertion
 z_above_B = geo.beltB_z + geo.partB_h + clearance;
 poses.p_above_B = [xB; geo.beltB_y; z_above_B];
 poses.phi_above_B = poses.phi_home + pi/2;   % rotation done during transit
