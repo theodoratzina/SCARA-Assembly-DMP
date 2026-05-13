@@ -56,20 +56,20 @@ for k = 1:N
         phi(k) = poses.phi_grasp;
 
     elseif tk <= T3
-        % Phase 3: transit + 90 deg rotation
+        % Phase 3: transit
         t_phase = tk - T2;
         [p(:,k), v(:,k)] = poly5_vec(p_track_end, poses.p_above_B, ...
                                      vA, [0;0;0], timing.t_trans, t_phase);
-        [phi(k), w(k)] = poly5_scalar(poses.phi_grasp, poses.phi_above_B, ...
-                                      0, 0, timing.t_trans, t_phase);
+        phi(k) = poses.phi_above_B;
+        w(k) = 0;
 
     elseif tk <= T4
-        % Phase 4: descend to assembly
+        % Phase 4: descend and screw
         t_phase = tk - T3;
         [p(:,k), v(:,k)] = poly5_vec(poses.p_above_B, poses.p_assembly, ...
                                      [0;0;0], [0;0;0], timing.t_desc, t_phase);
-        phi(k) = poses.phi_assembly;
-
+        [phi(k), w(k)] = poly5_scalar(poses.phi_above_B, poses.phi_assembly, ...
+                                      0, 0, timing.t_desc, t_phase);
     elseif tk <= T5
         % Phase 5: hold at assembly
         p(:,k) = poses.p_assembly;

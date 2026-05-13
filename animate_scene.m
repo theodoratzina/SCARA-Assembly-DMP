@@ -193,15 +193,16 @@ draw_box(ax, p, geo.partB_w, geo.partB_w, geo.partB_h, partB_rot, [0.25 0.35 0.7
 % Cylindrical socket (dark disc inside the top)
 sx = p(1) + 0.00 * cos(partB_rot);
 sy = p(2) + 0.00 * sin(partB_rot);
-draw_disc(ax, sx, sy, p(3) + geo.partB_h - geo.partB_socket_d, ...
-          geo.partB_socket_w / 2, 0, [0.10 0.10 0.20]);
+z_hole = p(3) + geo.partB_h + 0.002;
+draw_disc(ax, sx, sy, z_hole, geo.partB_socket_w / 2, ...
+          0, [0.10 0.10 0.20]);
 
-% Orientation indicator
-r = geo.partB_w/2;
-lx = [p(1), p(1) + r * cos(partB_rot)];
-ly = [p(2), p(2) + r * sin(partB_rot)];
-lz = [1 1] * (p(3) + geo.partB_h + 0.005);
-plot3(ax, lx, ly, lz, 'r-', 'LineWidth', 3, 'Tag', 'sceneObj');
+% % Orientation indicator
+% r = geo.partB_w/2;
+% lx = [p(1), p(1) + r * cos(partB_rot)];
+% ly = [p(2), p(2) + r * sin(partB_rot)];
+% lz = [1 1] * (p(3) + geo.partB_h + 0.005);
+% plot3(ax, lx, ly, lz, 'r-', 'LineWidth', 3, 'Tag', 'sceneObj');
 end
 
 
