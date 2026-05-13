@@ -44,12 +44,25 @@ xlabel(ax,'x [m]'); ylabel(ax,'y [m]'); zlabel(ax,'z [m]');
 view(ax, 35, 25);
 xlim(ax, ws(1:2)); ylim(ax, ws(3:4)); zlim(ax, ws(5:6));
 
-% Initial render and animation setup
-scara.plot(q_full(:,1).', 'workspace', ws, 'noshadow', ...
-           'nobase', 'notiles', 'delay', 0);
+% Create a visual clone of the robot and zero out its tool offset.
+scara_vis = SerialLink(scara);
+if isa(scara_vis.tool, 'SE3')
+    scara_vis.tool = SE3();   % newer Toolbox version (v10)
+else
+    scara_vis.tool = eye(4);  % older Toolbox version (v9)
+end
+
+% Use the visual clone for rendering
+scara_vis.plot(q_full(:,1).', 'workspace', ws, 'noshadow', ...
+           'nobase', 'notiles', 'delay', 0, 'nowrist');
 n_skip = 25;   % Draw every 25th frame for smooth, real-time playback
 
 for k = 1:n_skip:size(q_full, 2)
+    % Safety check: for closed figure, stop the animation
+    if ~ishandle(ax)
+        break;
+    end
+    
     % Clear previous frame's dynamic objects
     delete(findobj(ax, 'Tag', 'sceneObj'));
 
@@ -102,8 +115,8 @@ for k = 1:n_skip:size(q_full, 2)
     gripper_closed = (t_in_cycle >= T2) && (t_in_cycle < T5);
     draw_gripper(ax, T_tcp, gripper_closed);
 
-    % Update Robot
-    scara.animate(q_full(:,k).');
+    % Update Robot pose
+    scara_vis.animate(q_full(:,k).');
     title(ax, sprintf('Cycle %d   t = %.2f s', cycle_idx+1, t_global));
     drawnow;
 end
