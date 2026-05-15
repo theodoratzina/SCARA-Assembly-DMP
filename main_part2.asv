@@ -131,14 +131,13 @@ for s = 1:n_s
     phi_4 = phi_ret;
  
     % Concatenate
-    p_full = [p_1, p_2, p_3, p_4];
+    p_full   = [p_1, p_2, p_3, p_4];
     phi_full = [phi_1, phi_2, phi_3, phi_4];
-    N_full = size(p_full, 2);
-    t_full = (0:N_full - 1) * timing.dt;
+    N_full   = size(p_full, 2);
+    t_full   = (0:N_full - 1) * timing.dt;
  
     % Inverse Kinematics
-    q_full = zeros(4, N_full);   
-    q_full(:, 1) = q0;
+    q_full = zeros(4, N_full);   q_full(:, 1) = q0;
     for k = 2:N_full
         Tk = transl(p_full(:, k).') * trotz(phi_full(k)) * trotx(pi);
         q_full(:, k) = scara_ikine(Tk, q_full(:, k - 1));
@@ -147,13 +146,11 @@ for s = 1:n_s
     % Per-cycle geometry
     geo_s = geo;
     geo_s.beltB_x0 = geo.beltB_x0 + scen(s).delta(1);
-    geo_s.beltB_y = geo.beltB_y + scen(s).delta(2);
+    geo_s.beltB_y = geo.beltB_y  + scen(s).delta(2);
     geo_s.partB_rot = 0;
  
-    all_q_q2{s} = q_full;   
-    all_p_q2{s} = p_full;
-    all_phi_q2{s} = phi_full; 
-    all_t_q2{s} = t_full;
+    all_q_q2{s} = q_full;   all_p_q2{s} = p_full;
+    all_phi_q2{s} = phi_full; all_t_q2{s} = t_full;
     geo_per_cycle_q2{s} = geo_s;
 end
 
@@ -173,7 +170,7 @@ for s = 1:n_s
     phi_1 = phi_grasp;
  
     % 2. Deliver: position + orientation DMPs
-    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver);
+    [p_2, ~, ~]   = simulate_dmp(dmp_pos_del, p_grasp_end,   g_pos, t_deliver);
     [phi_2, ~, ~] = simulate_dmp(dmp_phi_del, phi_grasp_end, g_phi, t_deliver);
  
     % 3. Hold
@@ -182,7 +179,7 @@ for s = 1:n_s
     phi_3 = repmat(phi_2(end), 1, n_h);
  
     % 4. Return: position + orientation DMPs
-    [p_4, ~, ~] = simulate_dmp(dmp_pos_ret, g_pos, poses.p_home, t_ret);
+    [p_4, ~, ~] = simulate_dmp(dmp_pos_ret, g_pos, poses.p_home,   t_ret);
     [phi_4, ~, ~] = simulate_dmp(dmp_phi_ret, g_phi, poses.phi_home, t_ret);
  
     % Concatenate
@@ -192,8 +189,7 @@ for s = 1:n_s
     t_full = (0:N_full - 1) * timing.dt;
  
     % Inverse Kinematics
-    q_full = zeros(4, N_full);   
-    q_full(:, 1) = q0;
+    q_full = zeros(4, N_full);   q_full(:, 1) = q0;
     for k = 2:N_full
         Tk = transl(p_full(:, k).') * trotz(phi_full(k)) * trotx(pi);
         q_full(:, k) = scara_ikine(Tk, q_full(:, k - 1));
@@ -201,14 +197,12 @@ for s = 1:n_s
  
     % Per-cycle geometry
     geo_s = geo;
-    geo_s.beltB_x0 = geo.beltB_x0 + scen(s).delta(1);
-    geo_s.beltB_y = geo.beltB_y + scen(s).delta(2);
+    geo_s.beltB_x0  = geo.beltB_x0 + scen(s).delta(1);
+    geo_s.beltB_y   = geo.beltB_y  + scen(s).delta(2);
     geo_s.partB_rot = scen(s).theta;
  
-    all_q_q3{s} = q_full;   
-    all_p_q3{s} = p_full;
-    all_phi_q3{s} = phi_full; 
-    all_t_q3{s} = t_full;
+    all_q_q3{s} = q_full;   all_p_q3{s} = p_full;
+    all_phi_q3{s} = phi_full; all_t_q3{s} = t_full;
     geo_per_cycle_q3{s} = geo_s;
 end
 

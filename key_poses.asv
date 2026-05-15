@@ -1,40 +1,39 @@
 function poses = key_poses(geo, timing, T_home)
-% KEY_POSES  Compute the key end-effector poses for the assembly task.
+% Compute the key end-effector poses for the assembly task
 %
-%   poses = key_poses(geo, timing, T_home)
+% Args:
+%   geo: Struct containing scene geometry parameters
+%   timing: Struct containing trajectory timing parameters
+%   T_home: 4x4 homogeneous transformation matrix of the initial pose
 %
-%   Returns a struct with four target waypoints in task space:
-%     .p_home,    .phi_home
-%     .p_grasp,   .phi_grasp        (where Part A is at t = t_appr)
-%     .p_above_B, .phi_above_B      (clearance height above Part B)
-%     .p_assembly,.phi_assembly     (Part A inserted into Part B socket)
-%
-% Convention
-%   The full pose is built in plan_trajectory as
-%       T = transl(p) * trotz(phi) * trotx(pi)
-%   so the tool z-axis points in -world_z (matching the SCARA's link 2
-%   alpha = pi flip), and phi is the tool x-axis angle around +world_z.
+% Returns:
+%   poses: Struct with the 4 target waypoints (home, grasp, above_B, assembly)
 
-% Home
+% 1. Home
 poses.p_home = T_home(1:3, 4);
 poses.phi_home = atan2(T_home(2,1), T_home(1,1));
 
-% Grasp pose: meet Part A on belt A at t = t_appr
+% 2. Grasp pose: meet Part A on belt A
 xA_grasp = geo.beltA_x0 + geo.beltA_vx * timing.t_appr;
 poses.p_grasp = [xA_grasp; geo.beltA_y; geo.beltA_z + geo.partA_offset];
-poses.phi_grasp = poses.phi_home;
+poses.phi_grasp = 0;
 
-% ----- Above Part B: Part B's final position, clearance height -----
-xB              = geo.beltB_x0 + geo.beltB_vx * geo.beltB_dur;
-clearance       = 0.30;
-z_above_B       = geo.beltB_z + geo.partB_h + clearance;
-poses.p_above_B   = [xB; geo.beltB_y; z_above_B];
-poses.phi_above_B = poses.phi_home + pi/2;     % rotation done during transit
+% 3. Above Part B: final position, clearance height
+xB = geo.beltB_x0 + geo.beltB_vx * geo.beltB_dur;
+clearance = 0.30;   % safe hover distance above Part B before insertion
+z_above_B = geo.beltB_z + geo.partB_h + clearance;
+poses.p_above_B = [xB; geo.beltB_y; z_above_B];
+poses.phi_above_B = poses.phi_grasp;
 
-% ----- Assembly: Part A's screw bottom at top_B - socket_d -----
-z_assembly       = geo.beltB_z + geo.partB_h - geo.partB_socket_d ...
-                   + geo.partA_offset;
-poses.p_assembly   = [xB; geo.beltB_y; z_assembly];
-poses.phi_assembly = poses.phi_above_B;
+% 4. Entry: screw tip exactly at Part B's top surface
+z_entry_B = geo.beltB_z + geo.partB_h + geo.partA_offset;
+poses.p_entry_B = [xB; geo.beltB_y; z_entry_B];
+poses.phi_entry_B = poses.phi_above_B;            % no rotation yet
+
+
+% 4. Assembly
+z_assembly = geo.beltB_z + geo.partB_h - geo.partB_socket_d + geo.partA_offset;
+poses.p_assembly = [xB; geo.beltB_y; z_assembly];
+poses.phi_assembly = poses.phi_above_B + pi/2;   % rotation/screwing
 
 end

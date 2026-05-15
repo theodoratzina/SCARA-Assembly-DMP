@@ -41,8 +41,9 @@ timing.dt = 1e-3;
 timing.T_total = 12.0;
 timing.t_appr = 2.0;    % home -> grasp
 timing.t_track = 0.5;   % follow belt A while the gripper closes
-timing.t_trans = 3.5;   % grasp end -> above Part B (90 deg rotation)
-timing.t_desc = 1.0;    % descend onto Part B
+timing.t_trans = 3.5;   % grasp end -> above Part B
+timing.t_lower = 0.5;   % above Part B -> entry (vertical, no rotation)
+timing.t_screw = 0.5;   % entry -> assembly (vertical + 90° rotation)
 timing.t_hold = 0.5;    % gripper opens
 
 %% 4. Key poses and trajectory

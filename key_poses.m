@@ -20,12 +20,17 @@ poses.phi_grasp = 0;
 
 % 3. Above Part B: final position, clearance height
 xB = geo.beltB_x0 + geo.beltB_vx * geo.beltB_dur;
-clearance = geo.partA_offset;   % safe hover distance above Part B before insertion
+clearance = 0.30;   % safe hover distance above Part B before insertion
 z_above_B = geo.beltB_z + geo.partB_h + clearance;
 poses.p_above_B = [xB; geo.beltB_y; z_above_B];
 poses.phi_above_B = poses.phi_grasp;
 
-% 4. Assembly
+% 4. Entry: screw tip exactly at Part B's top surface
+z_entry_B = geo.beltB_z + geo.partB_h + geo.partA_offset;
+poses.p_entry_B = [xB; geo.beltB_y; z_entry_B];
+poses.phi_entry_B = poses.phi_above_B;   % no rotation yet
+
+% 5. Assembly: screw fully inserted
 z_assembly = geo.beltB_z + geo.partB_h - geo.partB_socket_d + geo.partA_offset;
 poses.p_assembly = [xB; geo.beltB_y; z_assembly];
 poses.phi_assembly = poses.phi_above_B + pi/2;   % rotation/screwing

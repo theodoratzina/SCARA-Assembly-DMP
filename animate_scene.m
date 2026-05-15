@@ -33,7 +33,7 @@ end
 
 % Define key animation trigger times within a single cycle
 T2 = timing.t_appr + timing.t_track;   % gripper closes
-T5 = T2 + timing.t_trans + timing.t_desc + timing.t_hold;   % gripper opens
+T5 = T2 + timing.t_trans + timing.t_lower + timing.t_screw + timing.t_hold;   % gripper opens
 
 % Initialize 3D animation figure and workspace
 ws = [-1 3 -2 2 0 3];   % workspace limits

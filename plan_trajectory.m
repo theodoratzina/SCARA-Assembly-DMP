@@ -17,12 +17,13 @@ dt = timing.dt;
 T1 = timing.t_appr;
 T2 = T1 + timing.t_track;
 T3 = T2 + timing.t_trans;
-T4 = T3 + timing.t_desc;
-T5 = T4 + timing.t_hold;
-T6 = timing.T_total - T5;
+T4 = T3 + timing.t_lower;
+T5 = T4 + timing.t_screw;
+T6 = T5 + timing.t_hold;
+T7 = timing.T_total - T6;
 
 % Safety checks
-assert(T6 > 0, 'Phase durations exceed T_total.');
+assert(T7 > 0, 'Phase durations exceed T_total.');
 assert(T3 >= geo.beltB_dur, 'Assembly starts before belt B has stopped.');
 
 % Velocity vector of Conveyor A
@@ -64,22 +65,30 @@ for k = 1:N
         w(k) = 0;
 
     elseif tk <= T4
-        % Phase 4: descend and screw
+        % Phase 4: lower to entry (vertical, no rotation)
         t_phase = tk - T3;
-        [p(:,k), v(:,k)] = poly5_vec(poses.p_above_B, poses.p_assembly, ...
-                                     [0;0;0], [0;0;0], timing.t_desc, t_phase);
-        [phi(k), w(k)] = poly5_scalar(poses.phi_above_B, poses.phi_assembly, ...
-                                      0, 0, timing.t_desc, t_phase);
+        [p(:,k), v(:,k)] = poly5_vec(poses.p_above_B, poses.p_entry_B, ...
+                                     [0;0;0], [0;0;0], timing.t_lower, t_phase);
+        phi(k) = poses.phi_entry_B;
+ 
     elseif tk <= T5
-        % Phase 5: hold at assembly
+        % Phase 5: screw into socket (vertical + 90° rotation)
+        t_phase = tk - T4;
+        [p(:,k), v(:,k)] = poly5_vec(poses.p_entry_B, poses.p_assembly, ...
+                                     [0;0;0], [0;0;0], timing.t_screw, t_phase);
+        [phi(k), w(k)] = poly5_scalar(poses.phi_entry_B, poses.phi_assembly, ...
+                                      0, 0, timing.t_screw, t_phase);
+
+    elseif tk <= T6
+        % Phase 6: hold at assembly
         p(:,k) = poses.p_assembly;
         phi(k) = poses.phi_assembly;
 
     else
-        % Phase 6: return home
-        t_phase = tk - T5;
+        % Phase 7: return home
+        t_phase = tk - T6;
         [p(:,k), v(:,k)] = poly5_vec(poses.p_assembly, poses.p_home, ...
-                                     [0;0;0], [0;0;0], T6, t_phase);
+                                     [0;0;0], [0;0;0], T7, t_phase);
         [phi(k), w(k)] = poly5_scalar(poses.phi_assembly, poses.phi_home, ...
                                       0, 0, T6, t_phase);
     end
