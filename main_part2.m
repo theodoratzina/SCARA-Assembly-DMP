@@ -53,10 +53,21 @@ if isa(T_home, 'SE3'), T_home = T_home.T; end
 poses = key_poses(geo, timing, T_home);
 demo = plan_trajectory(poses, geo, timing);
 
+% Compute demo joint positions and velocities (for overlay in plots)
+N_demo = numel(demo.t);
+demo.q = zeros(4, N_demo);  demo.q(:,1) = q0;
+for k = 2:N_demo
+    demo.q(:,k) = scara_ikine(demo.T(:,:,k), demo.q(:,k-1));
+end
+demo.dq = zeros(4, N_demo);
+for i = 1:4
+    demo.dq(i,:) = gradient(demo.q(i,:), timing.dt);
+end
+
 %% 3. Slice the demo into three segments
-T2 = timing.t_appr + timing.t_track;               % grasp: 0 -> T2
-T_fwd_end = T2 + timing.t_trans + timing.t_desc;   % deliver: T2 -> T_fwd
-T_ret_start = T_fwd_end + timing.t_hold;           % return:  T_ret -> end
+T2 = timing.t_appr + timing.t_track;   % grasp: 0 -> T2
+T_fwd_end = T2 + timing.t_trans + timing.t_lower + timing.t_screw;   % deliver: T2 -> T_fwd
+T_ret_start = T_fwd_end + timing.t_hold;   % return:  T_ret -> end
 
 idx_grasp = demo.t <= T2 + 1e-9;
 idx_deliver = demo.t >= T2 - 1e-9 & demo.t <= T_fwd_end + 1e-9;
@@ -213,8 +224,8 @@ for s = 1:n_s
 end
 
 %% 8. Plots
-plot_dmp_results(all_t_q2, all_p_q2, all_phi_q2, all_q_q2, demo, scen);
-plot_dmp_results(all_t_q3, all_p_q3, all_phi_q3, all_q_q3, demo, scen);
+plot_dmp_results(all_t_q2, all_p_q2, all_phi_q2, all_q_q2, demo, scen, 'Q2: Position DMP');
+plot_dmp_results(all_t_q3, all_p_q3, all_phi_q3, all_q_q3, demo, scen, 'Q3: Pos + Orient DMP');
 
 %% 9. Animations: 3 cycles, one per scenario
 disp('Q2: Gripper with constant angle');
@@ -230,6 +241,7 @@ disp('Q3: Full angle adaptation');
 q_concat_q3 = cat(2, all_q_q3{:});
 t_concat_q3 = (0:size(q_concat_q3, 2) - 1) * timing.dt;
 animate_scene(scara, q_concat_q3, t_concat_q3, geo_per_cycle_q3, timing, n_s);
+disp('Q3 completed');
 
 %% Helper functions
 function [dy, ddy] = num_deriv(y, dt)
@@ -243,48 +255,88 @@ for d = 1:D
 end
 end
 
-function plot_dmp_results(all_t, all_p, all_phi, all_q, demo, scen)
-% Visualize simulation results
+function plot_dmp_results(all_t, all_p, all_phi, all_q, demo, scen, ttl)
+% Visualize DMP simulation results (5 figures per call)
 n = numel(all_t);
+dt = all_t{1}(2) - all_t{1}(1);
 colors = lines(n);
+demo_style = {'--', 'Color', [1 1 1], 'LineWidth', 1.5};   % white dashed, on top
 labs = arrayfun(@(s) sprintf('S%d  \\delta=[%.2f,%.2f]  \\theta_\\delta=%d°', ...
                 s, scen(s).delta(1), scen(s).delta(2), ...
                 round(rad2deg(scen(s).theta))), ...
                 1:n, 'UniformOutput', false);
-
-figure('Name','EE position (DMP)');
+ 
+% 1. EE Position
+figure('Name', [ttl ' - EE position']);
 ylabs = {'x [m]','y [m]','z [m]'};
 for ax_i = 1:3
     subplot(3, 1, ax_i); hold on; grid on;
-    plot(demo.t, demo.p(ax_i, :), 'k:', 'LineWidth', 1.0);
     for s = 1:n
         plot(all_t{s}, all_p{s}(ax_i, :), 'Color', colors(s, :), 'LineWidth', 1.3);
     end
+    plot(demo.t, demo.p(ax_i, :), demo_style{:});   % demo on top
     xlabel('t [s]'); ylabel(ylabs{ax_i});
-    if ax_i == 1, legend(['Demo', labs], 'Location', 'best'); end
+    if ax_i == 1, legend([labs, {'Demo'}], 'Location', 'best'); end
 end
-sgtitle('End-effector position - DMP scenarios');
-
-figure('Name','EE orientation (DMP)');
+sgtitle([ttl ' - End-effector position']);
+ 
+% 2. EE Velocity
+figure('Name', [ttl ' - EE velocity']);
+ylabs = {'v_x [m/s]','v_y [m/s]','v_z [m/s]'};
+for ax_i = 1:3
+    subplot(3, 1, ax_i); hold on; grid on;
+    for s = 1:n
+        v_s = gradient(all_p{s}(ax_i, :), dt);
+        plot(all_t{s}, v_s, 'Color', colors(s, :), 'LineWidth', 1.3);
+    end
+    plot(demo.t, demo.v(ax_i, :), demo_style{:});
+    xlabel('t [s]'); ylabel(ylabs{ax_i});
+    if ax_i == 1, legend([labs, {'Demo'}], 'Location', 'best'); end
+end
+sgtitle([ttl ' - End-effector velocity']);
+ 
+% 3. EE Orientation
+figure('Name', [ttl ' - EE orientation']);
 hold on; grid on;
-plot(demo.t, rad2deg(demo.phi), 'k:', 'LineWidth', 1.0);
 for s = 1:n
     plot(all_t{s}, rad2deg(all_phi{s}), 'Color', colors(s, :), 'LineWidth', 1.3);
 end
+plot(demo.t, rad2deg(demo.phi), demo_style{:});
 xlabel('t [s]'); ylabel('\phi [deg]');
-legend(['Demo', labs], 'Location', 'best');
-title('End-effector orientation - DMP scenarios');
-
-figure('Name','Joint positions (DMP)');
+legend([labs, {'Demo'}], 'Location', 'best');
+title([ttl ' - End-effector orientation']);
+ 
+% 4. Joint Positions
+figure('Name', [ttl ' - Joint positions']);
 ylabs = {'q_1 [rad]','q_2 [rad]','q_3 [m]','q_4 [rad]'};
 for ax_i = 1:4
     subplot(4, 1, ax_i); hold on; grid on;
     for s = 1:n
         plot(all_t{s}, all_q{s}(ax_i, :), 'Color', colors(s, :), 'LineWidth', 1.3);
     end
+    if isfield(demo, 'q')
+        plot(demo.t, demo.q(ax_i, :), demo_style{:});
+    end
     xlabel('t [s]'); ylabel(ylabs{ax_i});
-    if ax_i == 1, legend(labs, 'Location', 'best'); end
+    if ax_i == 1, legend([labs, {'Demo'}], 'Location', 'best'); end
 end
-sgtitle('Joint positions - DMP scenarios');
-
+sgtitle([ttl ' - Joint positions']);
+ 
+% 5. Joint Velocities
+figure('Name', [ttl ' - Joint velocities']);
+ylabs = {'dq_1 [rad/s]','dq_2 [rad/s]','dq_3 [m/s]','dq_4 [rad/s]'};
+for ax_i = 1:4
+    subplot(4, 1, ax_i); hold on; grid on;
+    for s = 1:n
+        dq_s = gradient(all_q{s}(ax_i, :), dt);
+        plot(all_t{s}, dq_s, 'Color', colors(s, :), 'LineWidth', 1.3);
+    end
+    if isfield(demo, 'dq')
+        plot(demo.t, demo.dq(ax_i, :), demo_style{:});
+    end
+    xlabel('t [s]'); ylabel(ylabs{ax_i});
+    if ax_i == 1, legend([labs, {'Demo'}], 'Location', 'best'); end
+end
+sgtitle([ttl ' - Joint velocities']);
+ 
 end
