@@ -1,8 +1,4 @@
-%% main_part1.m  -  Robotics Project 2026, Part 1
-%  Simulates one assembly cycle (12 s) of the SCARA robot grasping Part A
-%  from belt A and assembling it onto Part B on belt B, then animates two
-%  consecutive cycles.
-
+%% Robotics - Part 1
 clear; close all; clc;
 
 %% 1. Robot
@@ -25,7 +21,7 @@ geo.beltB_vx = -0.8;
 geo.beltB_dur = 2.4;
 
 % Vertical offset from TCP to bottom of Part A while held in the gripper
-geo.partA_offset = 0.15;
+geo.partA_offset = 0.18;
 
 % Part A
 geo.partA_head_w = 0.25;
@@ -67,18 +63,18 @@ end
 %% 6. Joint velocities (numerical differentiation)
 dq = zeros(4, N);
 dq(:, 2:end) = diff(q, 1, 2) / timing.dt;
-dq(:, 1) = dq(:, 2);
+dq(:, 1) = dq(:, 2);   % Assume constant velocity for the first time step
 
 %% 7. Plots
 plot_results(traj, q, dq);
 
-%% 8. Animation
+%% 8. Animation (twο cycles)
 animate_scene(scara, q, traj.t, geo, timing, 2);
 
 %% Visualize simulation results
 function plot_results(traj, q, dq)
 
-figure('Name','End-effector position','Color','w');
+figure('Name','End-effector position');
 lab = {'x [m]','y [m]','z [m]'};
 for i = 1:3
     subplot(3,1,i); plot(traj.t, traj.p(i,:), 'LineWidth', 1.4); grid on;
@@ -86,7 +82,7 @@ for i = 1:3
 end
 sgtitle('End-effector position');
 
-figure('Name','End-effector velocity','Color','w');
+figure('Name','End-effector velocity');
 lab = {'v_x [m/s]','v_y [m/s]','v_z [m/s]'};
 for i = 1:3
     subplot(3,1,i); plot(traj.t, traj.v(i,:), 'LineWidth', 1.4); grid on;
@@ -94,7 +90,7 @@ for i = 1:3
 end
 sgtitle('End-effector linear velocity');
 
-figure('Name','End-effector orientation','Color','w');
+figure('Name','End-effector orientation');
 subplot(2,1,1); plot(traj.t, rad2deg(traj.phi), 'LineWidth', 1.4); grid on;
     xlabel('t [s]'); ylabel('\phi [deg]'); title('Tool rotation about z');
 subplot(2,1,2); plot(traj.t, rad2deg(traj.w), 'LineWidth', 1.4); grid on;

@@ -245,7 +245,7 @@ labs = arrayfun(@(s) sprintf('S%d  \\delta=[%.2f,%.2f]  \\theta_\\delta=%d°', .
                 round(rad2deg(scen(s).theta))), ...
                 1:n, 'UniformOutput', false);
 
-figure('Name','EE position (DMP)','Color','w');
+figure('Name','EE position (DMP)');
 ylabs = {'x [m]','y [m]','z [m]'};
 for ax_i = 1:3
     subplot(3, 1, ax_i); hold on; grid on;
@@ -258,7 +258,7 @@ for ax_i = 1:3
 end
 sgtitle('End-effector position - DMP scenarios');
 
-figure('Name','EE orientation (DMP)','Color','w');
+figure('Name','EE orientation (DMP)');
 hold on; grid on;
 plot(demo.t, rad2deg(demo.phi), 'k:', 'LineWidth', 1.0);
 for s = 1:n
@@ -268,7 +268,7 @@ xlabel('t [s]'); ylabel('\phi [deg]');
 legend(['Demo', labs], 'Location', 'best');
 title('End-effector orientation - DMP scenarios');
 
-figure('Name','Joint positions (DMP)','Color','w');
+figure('Name','Joint positions (DMP)');
 ylabs = {'q_1 [rad]','q_2 [rad]','q_3 [m]','q_4 [rad]'};
 for ax_i = 1:4
     subplot(4, 1, ax_i); hold on; grid on;

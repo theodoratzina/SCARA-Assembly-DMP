@@ -25,10 +25,7 @@ py = T(2, 4);
 pz = T(3, 4);
 phi = atan2(T(2,1), T(1,1));
 
-% 1. Prismatic Joint (q3): Calculate vertical extension
-q3 = base_z - tool_offset - d4 - pz;
-
-% 2. Planar 2R IK (q1, q2): Calculate shoulder and elbow angles
+% 1. Planar 2R IK (q1, q2): Calculate shoulder and elbow angles
 r2 = px^2 + py^2;
 c2 = (r2 - a1^2 - a2^2) / (2*a1*a2);
 c2 = max(min(c2, 1), -1);    % prevent float errors
@@ -41,6 +38,9 @@ else
 end
 q2 = atan2(s2, c2);
 q1 = atan2(py, px) - atan2(a2*s2, a1 + a2*c2);
+
+% 2. Prismatic Joint (q3): Calculate vertical extension
+q3 = base_z - tool_offset - d4 - pz;
 
 % 3. Wrist Orientation (q4): Calculate final rotation
 q4 = q1 + q2 - phi;

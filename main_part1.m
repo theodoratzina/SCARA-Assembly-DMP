@@ -74,7 +74,7 @@ animate_scene(scara, q, traj.t, geo, timing, 2);
 %% Visualize simulation results
 function plot_results(traj, q, dq)
 
-figure('Name','End-effector position','Color','w');
+figure('Name','End-effector position');
 lab = {'x [m]','y [m]','z [m]'};
 for i = 1:3
     subplot(3,1,i); plot(traj.t, traj.p(i,:), 'LineWidth', 1.4); grid on;
@@ -82,7 +82,7 @@ for i = 1:3
 end
 sgtitle('End-effector position');
 
-figure('Name','End-effector velocity','Color','w');
+figure('Name','End-effector velocity');
 lab = {'v_x [m/s]','v_y [m/s]','v_z [m/s]'};
 for i = 1:3
     subplot(3,1,i); plot(traj.t, traj.v(i,:), 'LineWidth', 1.4); grid on;
@@ -90,13 +90,13 @@ for i = 1:3
 end
 sgtitle('End-effector linear velocity');
 
-figure('Name','End-effector orientation','Color','w');
+figure('Name','End-effector orientation');
 subplot(2,1,1); plot(traj.t, rad2deg(traj.phi), 'LineWidth', 1.4); grid on;
     xlabel('t [s]'); ylabel('\phi [deg]'); title('Tool rotation about z');
 subplot(2,1,2); plot(traj.t, rad2deg(traj.w), 'LineWidth', 1.4); grid on;
     xlabel('t [s]'); ylabel('d\phi/dt [deg/s]'); title('Angular velocity');
 
-figure('Name','Joint positions','Color','w');
+figure('Name','Joint positions');
 lab = {'q_1 [rad]','q_2 [rad]','q_3 [m]','q_4 [rad]'};
 for i = 1:4
     subplot(4,1,i); plot(traj.t, q(i,:), 'LineWidth', 1.4); grid on;
@@ -104,7 +104,7 @@ for i = 1:4
 end
 sgtitle('Joint positions');
 
-figure('Name','Joint velocities','Color','w');
+figure('Name','Joint velocities');
 lab = {'dq_1 [rad/s]','dq_2 [rad/s]','dq_3 [m/s]','dq_4 [rad/s]'};
 for i = 1:4
     subplot(4,1,i); plot(traj.t, dq(i,:), 'LineWidth', 1.4); grid on;
