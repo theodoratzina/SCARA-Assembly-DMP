@@ -1,6 +1,6 @@
 function traj = plan_trajectory(poses, geo, timing)
-% Generates the end-effector trajectory across 6 phases:
-% Approach -> Track -> Transit -> Descend (90° rot) -> Hold -> Return
+% Generates the end-effector trajectory across 7 phases:
+% Approach -> Track -> Transit -> Lower -> Screw (90° rot) -> Hold -> Return
 %
 % Args:
 %   poses: Struct with the key target waypoints
@@ -40,7 +40,7 @@ v = zeros(3, N);
 phi = zeros(1, N);
 w = zeros(1, N);
 
-% Construct the trajectory point-by-point across all 6 phases
+% Construct the trajectory point-by-point across all 7 phases
 for k = 1:N
     tk = t(k);
 
@@ -90,7 +90,7 @@ for k = 1:N
         [p(:,k), v(:,k)] = poly5_vec(poses.p_assembly, poses.p_home, ...
                                      [0;0;0], [0;0;0], T7, t_phase);
         [phi(k), w(k)] = poly5_scalar(poses.phi_assembly, poses.phi_home, ...
-                                      0, 0, T6, t_phase);
+                                      0, 0, T7, t_phase);
     end
 end
 

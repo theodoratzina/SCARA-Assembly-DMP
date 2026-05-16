@@ -7,7 +7,7 @@ function poses = key_poses(geo, timing, T_home)
 %   T_home: 4x4 homogeneous transformation matrix of the initial pose
 %
 % Returns:
-%   poses: Struct with the 4 target waypoints (home, grasp, above_B, assembly)
+%   poses: Struct with the 5 target waypoints (home, grasp, above_B, entry_B, assembly)
 
 % 1. Home
 poses.p_home = T_home(1:3, 4);

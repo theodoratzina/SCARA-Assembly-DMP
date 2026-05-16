@@ -46,7 +46,7 @@ s_target = f_target ./ scale_safe;
 Psi = exp(-h .* (xt(:) - c).^2);   % time_steps x basis_functions
 Phi = (Psi ./ sum(Psi, 2)) .* xt(:);
 
-% Solve Solve Linear Least Squares to find optimal weights
+% Solve Linear Least Squares to find optimal weights
 w = (Phi \ s_target')';
 w(small_dim, :) = 0;
 
