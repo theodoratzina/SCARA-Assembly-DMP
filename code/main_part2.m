@@ -41,9 +41,9 @@ timing.dt = 1e-3;
 timing.T_total = 12.0;
 timing.t_appr = 2.0;    % home -> grasp
 timing.t_track = 0.5;   % follow belt A while the gripper closes
-timing.t_trans = 3.5;   % grasp end -> above Part B
+timing.t_trans = 3.0;   % grasp end -> above Part B
 timing.t_lower = 0.5;   % above Part B -> entry (vertical, no rotation)
-timing.t_screw = 0.5;   % entry -> assembly (vertical + 90° rotation)
+timing.t_screw = 1.0;   % entry -> assembly (vertical + 90° rotation)
 timing.t_hold = 0.5;    % gripper opens
 
 %% 2. Generate Part 1 demonstration
@@ -129,7 +129,8 @@ for s = 1:n_s
     phi_1 = phi_grasp;
  
     % 2. Deliver: position DMP, orientation from Part 1
-    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver);
+    dy0_del = dp_del(:, 1);
+    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver, dy0_del);
     phi_2 = phi_deliver;
  
     % 3. Hold
@@ -183,9 +184,25 @@ for s = 1:n_s
     p_1 = p_grasp;
     phi_1 = phi_grasp;
  
-    % 2. Deliver: position + orientation DMPs
-    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver);
-    [phi_2, ~, ~] = simulate_dmp(dmp_phi_del, phi_grasp_end, g_phi, t_deliver);
+    % 2a. Deliver Position
+    dy0_del = dp_del(:, 1);
+    [p_2, ~, ~] = simulate_dmp(dmp_pos_del, p_grasp_end, g_pos, t_deliver, dy0_del);
+    
+    % 2b. Deliver Orientation: Custom polynomial instead of DMP 
+    phi_2 = zeros(1, length(t_deliver));
+    t_align = timing.t_trans + timing.t_lower; % Duration of air movement
+    
+    for i = 1:length(t_deliver)
+        t_loc = t_deliver(i);
+        if t_loc <= t_align
+            % Phase A: Rotate to match the misalignment (theta_delta)
+            [phi_2(i), ~] = poly5_scalar(phi_grasp_end, scen(s).theta, 0, 0, t_align, t_loc);
+        else
+            % Phase B: The actual screw motion (strictly 90 degrees / pi/2)
+            t_screw_loc = t_loc - t_align;
+            [phi_2(i), ~] = poly5_scalar(scen(s).theta, scen(s).theta + pi/2, 0, 0, timing.t_screw, t_screw_loc);
+        end
+    end
  
     % 3. Hold
     n_h = round(timing.t_hold / timing.dt);
@@ -339,4 +356,15 @@ for ax_i = 1:4
 end
 sgtitle([ttl ' - Joint velocities']);
  
+end
+
+
+% 5th-order polynomial with position+velocity boundary conditions
+function [s, v] = poly5_scalar(s0, sf, v0, vf, T, t)
+    h = sf - s0;
+    a3 = (20*h - (8*vf + 12*v0)*T) / (2*T^3);
+    a4 = (-30*h + (14*vf + 16*v0)*T) / (2*T^4);
+    a5 = (12*h - 6*(vf + v0)*T) / (2*T^5);
+    s = s0 + v0*t + a3*t^3 + a4*t^4 + a5*t^5;
+    v = v0 + 3*a3*t^2 + 4*a4*t^3 + 5*a5*t^4;
 end

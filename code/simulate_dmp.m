@@ -1,4 +1,4 @@
-function [y, dy, ddy] = simulate_dmp(dmp, y0, g, t)
+function [y, dy, ddy] = simulate_dmp(dmp, y0, g, t, dy0)
 % Integrate a trained DMP forward with new start and goal
 %
 % Args:
@@ -6,6 +6,7 @@ function [y, dy, ddy] = simulate_dmp(dmp, y0, g, t)
 %   y0: new starting position
 %   g: new goal position
 %   t: time vector for the simulation
+%   dy0: (optional) initial spatial velocity vector
 %
 % Returns:
 %   y: generated position trajectory
@@ -19,10 +20,13 @@ g = g(:);
 D = numel(y0);
 scale = g - y0;   % the new spatial scale
 
+% Default to zero initial velocity if not provided
+if nargin < 5, dy0 = zeros(D, 1); end
+
 % State variables
 x = 1;   % canonical phase clock (starts at 1, decays to 0)
-y_curr = y0;   % initial position
-z_curr = zeros(D, 1);   % initial scaled velocity (starts from rest)
+y_curr = y0(:);   % initial position
+z_curr = dmp.tau * dy0(:);   % initial scaled velocity (allows non-zero starting velocity)
 
 y = zeros(D, N_t);
 dy = zeros(D, N_t);

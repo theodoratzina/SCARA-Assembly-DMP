@@ -11,7 +11,7 @@ function poses = key_poses(geo, timing, T_home)
 
 % 1. Home
 poses.p_home = T_home(1:3, 4);
-poses.phi_home = atan2(T_home(2,1), T_home(1,1));
+poses.phi_home = pi/4;
 
 % 2. Grasp pose: meet Part A on belt A
 xA_grasp = geo.beltA_x0 + geo.beltA_vx * timing.t_appr;
