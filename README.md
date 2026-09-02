@@ -82,9 +82,9 @@ The custom implementation successfully resolves standard academic DMP pitfalls, 
 | **3D Rendering Engine** | Custom patch-based graphics bypassing Robotics Toolbox limits. | Allows dynamic visualization of the opening/closing gripper and moving objects at 40 FPS. |
 
 <div align="center">
-  <img src="figures/Pos + Orient DMP - EE orientation.png" width="45%" hspace="2%" />
-  <img src="figures/Pos + Orient DMP - Joint velocities.png" width="45%" />
-  <p><em>Left: Perfect separation of base alignment and strict 90° assembly rotation. Right: Smooth, jerk-free joint velocities despite dynamic target adaptation.</em></p>
+  <img width="922" height="922" alt="Image" src="https://github.com/user-attachments/assets/89496442-6625-4e6f-9fea-7e9a66cbf751" />
+  <br>
+  <p><em>Custom 3D rendering of the SCARA arm executing the pick-and-place assembly.</em></p>
 </div>
 
 ---
