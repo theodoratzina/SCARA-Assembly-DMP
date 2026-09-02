@@ -31,18 +31,18 @@ This repository simulates a factory setup where a **SCARA robot** must synchroni
 
 ```text
 .
-├── code/                        # MATLAB source files
-│   ├── animate_scene.m          # Custom 3D rendering engine
-│   ├── create_robot.m           # SCARA DH-parameters setup
-│   ├── key_poses.m              # Dynamic waypoint calculator
-│   ├── main_part1.m             # Executable for ideal conditions
-│   ├── main_part2.m             # Executable for DMP adaptation
-│   ├── plan_trajectory.m        # 5th-order polynomial generator
-│   ├── scara_ikine.m            # Analytical Inverse Kinematics solver
-│   ├── simulate_dmp.m           # DMP integration (supports initial velocity)
-│   └── train_dmp.m              # DMP weight training via Least Squares
+├── code/                   # MATLAB source files
+│   ├── animate_scene.m
+│   ├── create_robot.m
+│   ├── key_poses.m
+│   ├── main_part1.m
+│   ├── main_part2.m
+│   ├── plan_trajectory.m   
+│   ├── scara_ikine.m
+│   ├── simulate_dmp.m
+│   └── train_dmp.m
 │
-├── figures/                     # Generated plots and simulation graphs
+├── figures/                # Generated plots and simulation graphs
 |
 ├── report.pdf
 └── robotics_project26.pdf
